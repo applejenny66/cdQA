@@ -57,3 +57,7 @@ def test_evaluate_pipeline():
     assert eval_dict["exact_match"] > 0.8
 
     assert eval_dict["f1"] > 0.8
+
+if __name__ == "__main__":
+    test_evaluate_pipeline()
+
