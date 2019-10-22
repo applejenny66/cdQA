@@ -13,19 +13,30 @@ def read_origin(number):
         rows = csv.reader(csvfile)
         for row in rows:
             print(row)
+            print ("\n")
             count += 1
             if (count < number):
                 pass
             else:
+                return (row)
                 break
+
+def writefirstline():
+    with open('csvdata.csv', 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        first_line =  ['date', 'title', 'category', 'link', 'abstract', 'paragraphs']
+        writer.writerow(first_line)
 
 def writedata():
     with open('csvdata.csv', 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
+        # ['date', 'title', 'category', 'link', 'abstract', 'paragraphs']
         writer.writerow(['姓名', '身高', '體重'])
 
-df = pdf_converter(directory_path='path_to_pdf_folder')
+#df = pdf_converter(directory_path='path_to_pdf_folder')
 
 
 if __name__ == "__main__":
-    read_origin(10)
+    data = read_origin(10)
+    print ("\n")
+    print ("the data is: ", data)
