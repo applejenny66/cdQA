@@ -18,7 +18,10 @@ df.head()
 cdqa_pipeline = QAPipeline(reader='./models/bert_qa_vCPU-sklearn.joblib')
 cdqa_pipeline.fit_retriever(df=df)
 
-query = 'Since when does the Excellence Program of BNP Paribas exist?'
+#query = 'Since when does the Excellence Program of BNP Paribas exist?'
+query = ' what activity did the BNP Paribas offer?'
+
+
 prediction = cdqa_pipeline.predict(query)
 
 print('query: {}'.format(query))
