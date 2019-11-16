@@ -43,6 +43,7 @@ def readcsv(file):
     with open(file, newline='') as csvfile:
         rows = csv.reader(csvfile)
         for row in rows:
+            tmp_list = []
             for i in range(0, len(row)):
                 print (str(i) + ": ", row[i])
                 translator= Translator(to_lang="chinese")
@@ -72,6 +73,7 @@ print (translation)
 
 if __name__ == "__main__":
     #data = read_origin(3)
-    readcsv('./nengo_data.csv')
+    #readcsv('./nengo_data.csv')
+    readcsv('./it.csv')
     print ("\n")
     #print ("the data is: ", data)
