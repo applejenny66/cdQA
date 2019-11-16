@@ -7,7 +7,10 @@ import csv
 import jieba
 import jieba.posseg as pseg
 import nltk
+import matplotlib.pyplot as plt
 
+import nengo
+import nengo_spa as spa
 
 #data type
 #date,title,category,link,abstract,paragraphs
@@ -109,18 +112,141 @@ def label(sentence):
     #nltk.download()
     text=nltk.word_tokenize(sentence)
     result = nltk.pos_tag(text)
+    #print (type(result))
+    #print (result[0])
     print (result)
+    type_list = []
+    word_list = []
+    verb_list = []
+    word_n = "N"
+    word_v = "V"
+    word_j = "J"
+    word_in = "IN"
+    for i in range(0, len(result)):
+        tmp_type = result[i][1]
+        if (tmp_type not in type_list):
+            type_list.append(tmp_type)
+        if (tmp_type.find(word_n) != -1 and (tmp_type.find(word_in) == -1) and \
+            (tmp_type.find(word_v) == -1)):
+            word_list.append(result[i][0])
+        if (tmp_type.find(word_v) != -1):
+            verb_list.append(result[i][0])
+    print ("total type of list: ", type_list)
+    print ("N word: ", word_list)
+    print ("\n")
+    print ("V word: ", verb_list)
+    print ("\n")
+    tidy_result = []
+    tidy_label_result = []
+    for i in range(0, len(result)):
+        tmp_type = result[i][1]
+        tmp_label_list = []
+        if ((tmp_type.find(word_n) != -1) or (tmp_type.find(word_v) != -1) or\
+            (tmp_type.find(word_in) != -1) or (tmp_type.find(word_j) != -1) or\
+            (tmp_type.find(",") != -1) or (tmp_type.find(".") != -1)):
+            tidy_result.append(result[i][0])
+            if (tmp_type.find(word_n) != -1):
+                tmp_label = "N"
+            elif (tmp_type.find(word_v) != -1):
+                tmp_label = "V"
+            elif (tmp_type.find(word_in) != -1):
+                tmp_label = "IN"
+            elif (tmp_type.find(word_j) != -1):
+                tmp_label = "J"
+            else:
+                tmp_label = result[i][1]
+            tmp_label_list.append(result[i][0])
+            tmp_label_list.append(tmp_label)
+            tidy_label_result.append(tmp_label_list)
+    print ("tidy result: ", tidy_result)
+    print ("tidy label rsult: ", tidy_label_result)
+
+    return (word_list, verb_list, tidy_result)
+
+
+def input_vision(t, sequence):
+    index = int(t / 0.5) % len(sequence)
+    return sequence[index]
+
+def nengo_cog(sequence):
+    # Number of dimensions for the SPs
+    dimensions = 64
+    # Make a model object with the SPA network
+    model = spa.Network(label='Parser sentence')
+    n_per_dim = 100
+
+    with model:
+        # Specify the modules to be used
+        vision = spa.Transcode(input_vision, output_vocab=dimensions)
+        phrase = spa.State(dimensions, neurons_per_dimension=n_per_dim)
+        motor = spa.State(dimensions, neurons_per_dimension=n_per_dim)
+        noun = spa.State(dimensions, feedback=1., neurons_per_dimension=n_per_dim)
+        verb = spa.State(dimensions, feedback=1., neurons_per_dimension=n_per_dim)
+
+        # Specify the action mapping
+        none_vision_cond = spa.dot(
+            spa.sym.NONE - spa.sym.WRITE - spa.sym.ONE - spa.sym.TWO - spa.sym.THREE,
+            vision)
+        num_vision_cond = spa.dot(vision, spa.sym.ONE + spa.sym.TWO + spa.sym.THREE)
+
+        with spa.ActionSelection() as action_sel:
+            spa.ifmax("Write vis", spa.dot(vision, spa.sym.WRITE),
+                vision >> verb)
+            spa.ifmax("Memorize", num_vision_cond,
+                vision >> noun)
+            spa.ifmax(
+                "Write mem",
+                0.5 * (none_vision_cond + spa.dot(phrase, spa.sym.WRITE * spa.sym.VERB)),
+                phrase * ~spa.sym.NOUN >> motor)
+
+        noun * spa.sym.NOUN + verb * spa.sym.VERB >> phrase
+
+    with model:
+        p_vision = nengo.Probe(vision.output, synapse=0.03)
+        p_phrase = nengo.Probe(phrase.output, synapse=0.03)
+        p_motor = nengo.Probe(motor.output, synapse=0.03)
+        p_noun = nengo.Probe(noun.output, synapse=0.03)
+        p_verb = nengo.Probe(verb.output, synapse=0.03)
+        p_selected_actions = nengo.Probe(action_sel.thalamus.output, synapse=0.01)
+        p_utility = nengo.Probe(action_sel.bg.input, synapse=0.01)
+
+    with nengo.Simulator(model) as sim:
+        sim.run(4.5)
+
+    vocab = model.vocabs[dimensions]
+
+    fig, ax = plt.subplots(7, 1, sharex=True, figsize=(16,12))
+
+    ax[0].plot(sim.trange(), spa.similarity(sim.data[p_vision], vocab))
+    ax[0].set_ylabel('Vision')
+
+    ax[1].plot(sim.trange(), spa.similarity(sim.data[p_phrase], vocab))
+    ax[1].set_ylabel('Phrase')
+
+    ax[2].plot(sim.trange(), spa.similarity(sim.data[p_motor], vocab))
+    ax[2].legend(vocab.keys(), loc='right', bbox_to_anchor=(1.11, 0.5))
+    ax[2].set_ylabel('Motor')
+
+    ax[3].plot(sim.trange(), spa.similarity(sim.data[p_noun], vocab))
+    ax[3].set_ylabel('Noun')
+
+    ax[4].plot(sim.trange(), spa.similarity(sim.data[p_verb], vocab))
+    ax[4].set_ylabel('Verb')
+
+    ax[5].plot(sim.trange(), sim.data[p_utility])
+    ax[5].legend(tuple(action_sel.keys()), loc='right', bbox_to_anchor=(1.13, -0.1))
+    ax[5].set_ylabel('Utility')
+
+    ax[6].plot(sim.trange(), sim.data[p_selected_actions])
+    ax[6].set_ylabel('Selected Action')
+    plt.show()
+
 """
 # 以下是将简单句子从英语翻译中文
 translator= Translator(to_lang="chinese")
 translation = translator.translate("Good night!")
 print (translation)
 
-
-# 在任何两种语言之间，中文翻译成英文
-translator= Translator(from_lang="chinese",to_lang="english")
-translation = translator.translate("我想你")
-print (translation)
 """
 
 if __name__ == "__main__":
@@ -137,5 +263,15 @@ if __name__ == "__main__":
     #                    可能的解释"
     #words = segmentation(chinese_sentence)
     #print ("words: ", words)
-    label(sentence_list[0])
-
+    word_list, verb_list, tidy_result = label(sentence_list[1])
+    #tidy_sentence = ""
+    #for i in range(0, len(tidy_result)):
+    #    tidy_sentence += tidy_result[i]
+    #    tidy_sentence += " "
+    #print ("tidy sentence: ", tidy_sentence)
+    
+    sequence = tidy_result
+    #print (type(sequence))
+    #print (sequence)
+    
+    
