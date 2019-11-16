@@ -12,6 +12,7 @@ download_bnpp_data(dir='./data/bnpp_newsroom_v1.1/')
 download_model(model='bert-squad_1.1', dir='./models')
 
 df = pd.read_csv('./data/bnpp_newsroom_v1.1/bnpp_newsroom-v1.1.csv', converters={'paragraphs': literal_eval})
+
 df = filter_paragraphs(df)
 df.head()
 

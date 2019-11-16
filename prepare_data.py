@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*
 # prepare_data.py
 
+from translate import Translator
 from cdqa.utils.converters import pdf_converter
 import csv
 #data type
 #date,title,category,link,abstract,paragraphs
+#['date', 'title', 'category', 'link', 'abstract', 'paragraphs']
 
 def read_origin(number):
     number = int(number)
@@ -35,8 +37,41 @@ def writedata():
 
 #df = pdf_converter(directory_path='path_to_pdf_folder')
 
+def readcsv(file):
+    #number = int(number)
+    count = 0
+    with open(file, newline='') as csvfile:
+        rows = csv.reader(csvfile)
+        for row in rows:
+            for i in range(0, len(row)):
+                print (str(i) + ": ", row[i])
+                translator= Translator(to_lang="chinese")
+                translation = translator.translate(row[i])
+                print (translation)
+            #print(row)
+            print ("\n")
+            print ("length: ", len(row))
+            count += 1
+            if (count > 1):
+                break
+
+
+
+"""
+# 以下是将简单句子从英语翻译中文
+translator= Translator(to_lang="chinese")
+translation = translator.translate("Good night!")
+print (translation)
+
+
+# 在任何两种语言之间，中文翻译成英文
+translator= Translator(from_lang="chinese",to_lang="english")
+translation = translator.translate("我想你")
+print (translation)
+"""
 
 if __name__ == "__main__":
-    data = read_origin(10)
+    #data = read_origin(3)
+    readcsv('./nengo_data.csv')
     print ("\n")
-    print ("the data is: ", data)
+    #print ("the data is: ", data)
