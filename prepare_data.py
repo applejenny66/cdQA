@@ -4,6 +4,11 @@
 from translate import Translator
 from cdqa.utils.converters import pdf_converter
 import csv
+import jieba
+import jieba.posseg as pseg
+import nltk
+
+
 #data type
 #date,title,category,link,abstract,paragraphs
 #['date', 'title', 'category', 'link', 'abstract', 'paragraphs']
@@ -42,22 +47,69 @@ def readcsv(file):
     count = 0
     with open(file, newline='') as csvfile:
         rows = csv.reader(csvfile)
+        total_tmp_list = []
         for row in rows:
+            #total_tmp_list.append(row)
             tmp_list = []
+            tmp_list.append(row)
+            sentence = row[0]
+            hightlight = row[1]
+            position = sentence.find(hightlight)
+            tmp_list.append(position)
+            total_tmp_list.append(tmp_list)
             for i in range(0, len(row)):
                 print (str(i) + ": ", row[i])
+                #sentence = row[i]
+                tmp_list = row[i].split(" ")
+                print (tmp_list)
+                """
                 translator= Translator(to_lang="chinese")
                 translation = translator.translate(row[i])
                 print (translation)
+                """
             #print(row)
             print ("\n")
-            print ("length: ", len(row))
+            #print ("length: ", len(row))
             count += 1
             if (count > 1):
+                print ("total: ", total_tmp_list)
+                print ("len(total): ", len(total_tmp_list))
+                print ("len(total[0]): ", len(total_tmp_list[0]))
+                return (total_tmp_list)
                 break
 
+def processing(total_list):
+    sentence_list = []
+    translate_list = []
+    for i in range(0, len(total_list)):
+        position = total_list[i][1]
+        dev_position = len(total_list[i][0][1])
+        tmp_sentence = total_list[i][0][0][:(position+dev_position+1)]
+        sentence_list.append(tmp_sentence)
+        #translator = Translator(to_lang="chinese")
+        #translation = translator.translate(tmp_sentence)
+        #translate_list.append(translation)
+    return (sentence_list)
+    #return (sentence_list, translate_list)
 
+def segmentation(sentence):
+    words = pseg.cut(sentence)
+    return_word=''
 
+    for w in words:
+        w = str(w)
+        pair = w.split("/")
+        print (pair)
+        return_word = return_word+','+str(w)
+    return return_word
+    #seg_list = pseg.cut(str(sentence))
+    #print(" , ".join(seg_list))
+
+def label(sentence):
+    #nltk.download()
+    text=nltk.word_tokenize(sentence)
+    result = nltk.pos_tag(text)
+    print (result)
 """
 # 以下是将简单句子从英语翻译中文
 translator= Translator(to_lang="chinese")
@@ -74,6 +126,16 @@ print (translation)
 if __name__ == "__main__":
     #data = read_origin(3)
     #readcsv('./nengo_data.csv')
-    readcsv('./it.csv')
+    total_list = readcsv('./it.csv')
+    sentence_list = processing(total_list)
+    print ("sentence: ", sentence_list)
+    #print ("translate: ", translate_list)
     print ("\n")
-    #print ("the data is: ", data)
+    #words = segmentation(translate_list[0])
+    #chinese_sentence = "虽然这给生活在南方的古代玛雅人带来了困难，\
+    #                    但也让现代考古学家们难以理解为什么古代干旱在潮湿的南方比在干燥的北方造成更大的问题。\
+    #                    可能的解释"
+    #words = segmentation(chinese_sentence)
+    #print ("words: ", words)
+    label(sentence_list[0])
+
