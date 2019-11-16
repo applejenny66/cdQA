@@ -161,15 +161,31 @@ def label(sentence):
     print ("tidy result: ", tidy_result)
     print ("tidy label rsult: ", tidy_label_result)
 
-    return (word_list, verb_list, tidy_result)
+    return (word_list, verb_list, tidy_result, tidy_label_result)
 
 
-def input_vision(t, sequence):
-    index = int(t / 0.5) % len(sequence)
-    return sequence[index]
 
-def nengo_cog(sequence):
+
+def nengo_cog(sequence, label_sequence):
+    def input_vision(t):
+        index = int(t / 0.5) % len(sequence)
+        return sequence[index]
+    #sequence = 'WRITE ONE NONE WRITE TWO NONE THREE WRITE NONE'.split()
     # Number of dimensions for the SPs
+    n_list = []
+    v_list = []
+    in_list = []
+    j_list = []
+    len_seq = len(sequence)
+    for i in range(0, len_seq):
+        if (label_sequence[i][1] == "N"):
+            n_list.append(i)
+        elif (label_sequence[i][1] == "V"):
+            v_list.append(i)
+        elif (label_sequence[i][1] == "IN"):
+            in_list.append(i)
+        elif (label_sequence[i][1] == "J"):
+            j_list.append(i)
     dimensions = 64
     # Make a model object with the SPA network
     model = spa.Network(label='Parser sentence')
@@ -182,21 +198,42 @@ def nengo_cog(sequence):
         motor = spa.State(dimensions, neurons_per_dimension=n_per_dim)
         noun = spa.State(dimensions, feedback=1., neurons_per_dimension=n_per_dim)
         verb = spa.State(dimensions, feedback=1., neurons_per_dimension=n_per_dim)
-
+        print ("type spa.sym.NOUN: ", type(spa.sym.NOUN))
         # Specify the action mapping
+        for i in range(0, len(n_list)):
+            n_index = n_list[i]
+            NT = sequence[n_index].upper()
+            #print (NT)
+            #print (spa.sym.VERB)
+            #spa.sym.NT = PointerSymbol('NT', _TAnyVocab('TAnyNT'))
+
+            spa.sym.NN = spa.sym.NN + spa.sym.NT
+        for i in range(0, len(v_list)):
+            v_index = v_list[i]
+            VT = sequence[v_index].upper()
+            spa.sym.VB = spa.sym.VB + VT
+        for i in range(0, len(in_list)):
+            in_index = in_list[i]
+            IT = sequence[in_index].upper()
+            spa.sym.IN = spa.sym.IN + IT
+        for i in range(0, len(j_list)):
+            j_index = j_list[i]
+            JT = sequence[j_index].upper()
+            
+            spa.sym.J = spa.sym.J + JT
         none_vision_cond = spa.dot(
-            spa.sym.NONE - spa.sym.WRITE - spa.sym.ONE - spa.sym.TWO - spa.sym.THREE,
+            spa.sym.NONE - spa.sym.VB - spa.sym.IN - spa.sym.J,
             vision)
-        num_vision_cond = spa.dot(vision, spa.sym.ONE + spa.sym.TWO + spa.sym.THREE)
+        num_vision_cond = spa.dot(vision, spa.sym.IN + spa.sym.J)
 
         with spa.ActionSelection() as action_sel:
-            spa.ifmax("Write vis", spa.dot(vision, spa.sym.WRITE),
+            spa.ifmax("Write vis", spa.dot(vision, spa.sym.VB),
                 vision >> verb)
             spa.ifmax("Memorize", num_vision_cond,
                 vision >> noun)
             spa.ifmax(
                 "Write mem",
-                0.5 * (none_vision_cond + spa.dot(phrase, spa.sym.WRITE * spa.sym.VERB)),
+                0.5 * (none_vision_cond + spa.dot(phrase, spa.sym.VB * spa.sym.VERB)),
                 phrase * ~spa.sym.NOUN >> motor)
 
         noun * spa.sym.NOUN + verb * spa.sym.VERB >> phrase
@@ -263,7 +300,8 @@ if __name__ == "__main__":
     #                    可能的解释"
     #words = segmentation(chinese_sentence)
     #print ("words: ", words)
-    word_list, verb_list, tidy_result = label(sentence_list[1])
+    word_list, verb_list, tidy_result, tidy_label_result = label(sentence_list[1])
+    nengo_cog(tidy_result, tidy_label_result)
     #tidy_sentence = ""
     #for i in range(0, len(tidy_result)):
     #    tidy_sentence += tidy_result[i]
