@@ -13,14 +13,14 @@ def input_vision(t):
     index = int(t / 0.5) % len(sequence)
     return sequence[index]
 
-print (input_vision(1))
+#print (input_vision(1))
 # Number of dimensions for the SPs
 dimensions = 64
 
 # Make a model object with the SPA network
 model = spa.Network(label='Parser')
 n_per_dim = 100
-"""
+
 with model:
     # Specify the modules to be used
     vision = spa.Transcode(input_vision, output_vocab=dimensions)
@@ -28,12 +28,13 @@ with model:
     motor = spa.State(dimensions, neurons_per_dimension=n_per_dim)
     noun = spa.State(dimensions, feedback=1., neurons_per_dimension=n_per_dim)
     verb = spa.State(dimensions, feedback=1., neurons_per_dimension=n_per_dim)
+    spa.sym.warms
 
     # Specify the action mapping
     none_vision_cond = spa.dot(
-        spa.sym.NONE - spa.sym.WRITE - spa.sym.ONE - spa.sym.TWO - spa.sym.THREE,
+        spa.sym.NONE - spa.sym.HEAT - spa.sym.WARMS - spa.sym.SURFACE - spa.sym.AIR,
         vision)
-    num_vision_cond = spa.dot(vision, spa.sym.ONE + spa.sym.TWO + spa.sym.THREE)
+    num_vision_cond = spa.dot(vision, spa.sym.WARMS + spa.sym.SURFACE + spa.sym.AIR)
 
     with spa.ActionSelection() as action_sel:
         spa.ifmax("Write vis", spa.dot(vision, spa.sym.WRITE),
@@ -88,4 +89,3 @@ ax[6].set_ylabel('Selected Action')
 plt.savefig('parse_test.png')
 
 plt.show()
-"""

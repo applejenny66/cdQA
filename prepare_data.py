@@ -29,7 +29,7 @@ def read_origin(number):
                 pass
             else:
                 return (row)
-                break
+                #break
 
 def writefirstline():
     with open('csvdata.csv', 'w', newline='') as csvfile:
@@ -64,24 +64,26 @@ def readcsv(file):
                 print (str(i) + ": ", row[i])
                 #sentence = row[i]
                 tmp_list = row[i].split(" ")
-                print (tmp_list)
+                print ("tmp_list: ", tmp_list)
                 """
                 translator= Translator(to_lang="chinese")
                 translation = translator.translate(row[i])
                 print (translation)
                 """
             #print(row)
+            #print ("total tmp list: ", total_tmp_list)
             print ("\n")
             #print ("length: ", len(row))
             count += 1
-            if (count > 1):
+            if (count > 4):
                 print ("total: ", total_tmp_list)
                 print ("len(total): ", len(total_tmp_list))
                 print ("len(total[0]): ", len(total_tmp_list[0]))
                 return (total_tmp_list)
-                break
+                #break
 
 def processing(total_list):
+    print ("total list: ", total_list)
     sentence_list = []
     translate_list = []
     for i in range(0, len(total_list)):
@@ -142,8 +144,7 @@ def label(sentence):
         tmp_type = result[i][1]
         tmp_label_list = []
         if ((tmp_type.find(word_n) != -1) or (tmp_type.find(word_v) != -1) or\
-            (tmp_type.find(word_in) != -1) or (tmp_type.find(word_j) != -1) or\
-            (tmp_type.find(",") != -1) or (tmp_type.find(".") != -1)):
+            (tmp_type.find(word_in) != -1) or (tmp_type.find(word_j) != -1)):
             tidy_result.append(result[i][0])
             if (tmp_type.find(word_n) != -1):
                 tmp_label = "N"
@@ -166,12 +167,19 @@ def label(sentence):
 
 
 
-def nengo_cog(sequence, label_sequence):
+def nengo_cog(sequence, label_sequence, savename):
     def input_vision(t):
         index = int(t / 0.5) % len(sequence)
         return sequence[index]
     #sequence = 'WRITE ONE NONE WRITE TWO NONE THREE WRITE NONE'.split()
     # Number of dimensions for the SPs
+    for i in range(0, len(sequence)):
+        tmp_s = sequence[i]
+        tmp_s = tmp_s.upper()
+        sequence[i] = tmp_s
+        tmp_ls = label_sequence[i][0]
+        tmp_ls = tmp_ls.upper()
+        label_sequence[i][0] = tmp_ls
     n_list = []
     v_list = []
     in_list = []
@@ -182,15 +190,20 @@ def nengo_cog(sequence, label_sequence):
             n_list.append(i)
         elif (label_sequence[i][1] == "V"):
             v_list.append(i)
-        elif (label_sequence[i][1] == "IN"):
-            in_list.append(i)
+        #elif (label_sequence[i][1] == "IN"):
+        #    in_list.append(i)
         elif (label_sequence[i][1] == "J"):
             j_list.append(i)
+    print ("n list: ", n_list)
+    print ("v list: ", v_list)
+    print ("in list: ", in_list)
+    print ("j list: ", j_list)
+
     dimensions = 64
     # Make a model object with the SPA network
     model = spa.Network(label='Parser sentence')
     n_per_dim = 100
-
+    
     with model:
         # Specify the modules to be used
         vision = spa.Transcode(input_vision, output_vocab=dimensions)
@@ -198,7 +211,7 @@ def nengo_cog(sequence, label_sequence):
         motor = spa.State(dimensions, neurons_per_dimension=n_per_dim)
         noun = spa.State(dimensions, feedback=1., neurons_per_dimension=n_per_dim)
         verb = spa.State(dimensions, feedback=1., neurons_per_dimension=n_per_dim)
-        print ("type spa.sym.NOUN: ", type(spa.sym.NOUN))
+        #print ("type spa.sym.NOUN: ", type(spa.sym.NOUN))
         # Specify the action mapping
         for i in range(0, len(n_list)):
             n_index = n_list[i]
@@ -211,20 +224,20 @@ def nengo_cog(sequence, label_sequence):
         for i in range(0, len(v_list)):
             v_index = v_list[i]
             VT = sequence[v_index].upper()
-            spa.sym.VB = spa.sym.VB + VT
+            spa.sym.VB = spa.sym.VB + spa.sym.VT
         for i in range(0, len(in_list)):
             in_index = in_list[i]
             IT = sequence[in_index].upper()
-            spa.sym.IN = spa.sym.IN + IT
+            spa.sym.IN = spa.sym.IN + spa.sym.IT
         for i in range(0, len(j_list)):
             j_index = j_list[i]
             JT = sequence[j_index].upper()
             
-            spa.sym.J = spa.sym.J + JT
+            spa.sym.J = spa.sym.J + spa.sym.JT
         none_vision_cond = spa.dot(
-            spa.sym.NONE - spa.sym.VB - spa.sym.IN - spa.sym.J,
+            spa.sym.NONE - spa.sym.VB - spa.sym.IN - spa.sym.J -spa.sym.NN,
             vision)
-        num_vision_cond = spa.dot(vision, spa.sym.IN + spa.sym.J)
+        num_vision_cond = spa.dot(vision, spa.sym.IN + spa.sym.J + spa.sym.NN)
 
         with spa.ActionSelection() as action_sel:
             spa.ifmax("Write vis", spa.dot(vision, spa.sym.VB),
@@ -276,20 +289,14 @@ def nengo_cog(sequence, label_sequence):
 
     ax[6].plot(sim.trange(), sim.data[p_selected_actions])
     ax[6].set_ylabel('Selected Action')
-    plt.show()
-
-"""
-# 以下是将简单句子从英语翻译中文
-translator= Translator(to_lang="chinese")
-translation = translator.translate("Good night!")
-print (translation)
-
-"""
+    plt.savefig(savename)
+    #plt.show()
 
 if __name__ == "__main__":
     #data = read_origin(3)
     #readcsv('./nengo_data.csv')
-    total_list = readcsv('./it.csv')
+    total_list = readcsv("./it.csv")
+    print ("total list: ", total_list)
     sentence_list = processing(total_list)
     print ("sentence: ", sentence_list)
     #print ("translate: ", translate_list)
@@ -300,16 +307,25 @@ if __name__ == "__main__":
     #                    可能的解释"
     #words = segmentation(chinese_sentence)
     #print ("words: ", words)
-    word_list, verb_list, tidy_result, tidy_label_result = label(sentence_list[1])
-    nengo_cog(tidy_result, tidy_label_result)
-    #tidy_sentence = ""
-    #for i in range(0, len(tidy_result)):
-    #    tidy_sentence += tidy_result[i]
-    #    tidy_sentence += " "
-    #print ("tidy sentence: ", tidy_sentence)
-    
-    sequence = tidy_result
-    #print (type(sequence))
-    #print (sequence)
-    
+    for i in range(0, len(sentence_list)):
+        count = str(i)
+        word_list, verb_list, tidy_result, tidy_label_result = label(sentence_list[i])
+        save_name = count + ".png"
+        nengo_cog(tidy_result, tidy_label_result, savename = save_name)
+        print ("finished : ", str(i))
+        #tidy_sentence = ""
+        #for i in range(0, len(tidy_result)):
+        #    tidy_sentence += tidy_result[i]
+        #    tidy_sentence += " "
+        #print ("tidy sentence: ", tidy_sentence)
+        
+        #sequence = tidy_result
+        #print (type(sequence))
+        #print (sequence)
+        # 以下是将简单句子从英语翻译中文
+        #translator= Translator(to_lang="chinese")
+        #translation = translator.translate("Good night!")
+        #print (translation)
+    print ("finished all")
+
     
